@@ -57,13 +57,13 @@ function select(key,b){
 function calculate(){state.scores=Object.fromEntries(KEYS.map(k=>[k,0]));state.answers.forEach(k=>state.scores[k]++)}
 function mainProfile(){return KEYS.reduce((best,k)=>state.scores[k]>state.scores[best]?k:best)}
 function mask(e){let d=e.target.value.replace(/\D/g,"").slice(0,11);e.target.value=d.length<=2?"("+d:d.length<=6?d.replace(/(\d{2})(\d+)/,"($1) $2"):d.length<=10?d.replace(/(\d{2})(\d{4})(\d+)/,"($1) $2-$3"):d.replace(/(\d{2})(\d{5})(\d+)/,"($1) $2-$3")}
-function valid(form){let ok=true;form.querySelectorAll("[required]").forEach(f=>{const bad=!f.value.trim()||(f.type==="tel"&&f.value.replace(/\D/g,"").length<10);f.classList.toggle("invalid",bad);if(bad)ok=false});return ok}
+function valid(form){let ok=true;form.querySelectorAll("[required]").forEach(f=>{const value=f.value.trim(),bad=!value||(f.type==="tel"&&value.replace(/\D/g,"").length<10)||(f.type==="email"&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value));f.classList.toggle("invalid",bad);if(bad)ok=false});return ok}
 async function submitLead(e){
  e.preventDefault();const form=e.currentTarget;
- if(!valid(form)){$("#form-error").textContent="Preencha seu nome e WhatsApp para continuar o teste.";form.querySelector(".invalid")?.focus();return}
+ if(!valid(form)){$("#form-error").textContent="Preencha corretamente seu nome, WhatsApp e e-mail para continuar o teste.";form.querySelector(".invalid")?.focus();return}
  $("#form-error").textContent="";const btn=form.querySelector("[type=submit]");btn.disabled=true;btn.textContent="Salvando…";
  const data=Object.fromEntries(new FormData(form));
- state.lead={id:crypto.randomUUID?crypto.randomUUID():"lead-"+Date.now(),createdAt:new Date().toISOString(),...data,profile:"",profileKey:"",scores:{},answers:[...state.answers],source:"quiz-perfil-carreira",status:"Em andamento"};
+ state.lead={id:crypto.randomUUID?crypto.randomUUID():"lead-"+Date.now(),createdAt:new Date().toISOString(),studentName:data.studentName.trim(),studentWhatsapp:data.studentWhatsapp.trim(),studentEmail:data.studentEmail.trim().toLowerCase(),profile:"",profileKey:"",scores:{},answers:[...state.answers],source:"quiz-perfil-carreira",status:"Em andamento"};
  await saveLead(state.lead);trackMetaStandard("Lead");track("lead_submitted",{stage:"after_3_questions"});
  continueQuizAfterLead();btn.disabled=false;btn.innerHTML='Continuar meu teste <span>→</span>';
 }
@@ -89,19 +89,14 @@ async function saveLead(lead){
    id:lead.id,
    nome:lead.studentName,
    whatsapp:lead.studentWhatsapp,
+   email:lead.studentEmail,
    status:lead.status
  });
 
- try{
-   // Caminho extra de envio: ajuda principalmente em celulares/navegadores que interrompem requisições.
-   if(navigator.sendBeacon){
-     const queued=navigator.sendBeacon(SHEETS_WEB_APP_URL,new Blob([payload],{type:"text/plain;charset=utf-8"}));
-     console.info("[Sheets] Beacon enviado/na fila:",queued);
-   }
-
-   // text/plain evita a requisição OPTIONS que costuma ser bloqueada pelo Apps Script.
-   // no-cors gera uma resposta opaca: o recebimento é confirmado diretamente na planilha.
-   await fetch(SHEETS_WEB_APP_URL,{
+  try{
+    // text/plain evita a requisição OPTIONS que costuma ser bloqueada pelo Apps Script.
+    // no-cors gera uma resposta opaca: o recebimento é confirmado diretamente na planilha.
+    await fetch(SHEETS_WEB_APP_URL,{
      method:"POST",
      mode:"no-cors",
      headers:{"Content-Type":"text/plain;charset=utf-8"},
@@ -109,12 +104,18 @@ async function saveLead(lead){
      cache:"no-store",
      redirect:"follow",
      keepalive:true
-   });
-   return {savedLocally:true,sentToSheets:true};
- }catch(error){
-   console.error("Não foi possível enviar o lead ao Google Sheets:",error);
-   return {savedLocally:true,sentToSheets:false,error:error.message};
- }
+    });
+    return {savedLocally:true,sentToSheets:true};
+  }catch(error){
+    console.error("Não foi possível enviar o lead ao Google Sheets:",error);
+    // Em celulares, tenta enfileirar o envio caso a requisição principal seja interrompida.
+    if(navigator.sendBeacon){
+      const queued=navigator.sendBeacon(SHEETS_WEB_APP_URL,new Blob([payload],{type:"text/plain;charset=utf-8"}));
+      console.info("[Sheets] Beacon de contingência enviado/na fila:",queued);
+      return {savedLocally:true,sentToSheets:queued,error:error.message};
+    }
+    return {savedLocally:true,sentToSheets:false,error:error.message};
+  }
 }
 
 function renderResult(key){

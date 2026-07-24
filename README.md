@@ -10,11 +10,14 @@ Publique index.html, styles.css e script.js juntos no GitHub Pages, Netlify, Ver
 
 1. Em script.js, troque teamWhatsapp pelo número oficial.
 2. Em index.html, personalize a marca provisória PróximoPasso.
-3. Revise a Política de Privacidade com o responsável jurídico.
-4. Integre Google Sheets ou Supabase na função saveLead.
-5. Adicione Meta Pixel e Google Analytics nos pontos comentados.
+3. Confirme a URL do Apps Script em `SHEETS_WEB_APP_URL`.
+4. Configure a chave e a lista do Brevo nas propriedades do Apps Script.
+5. Confira o Pixel da Meta e adicione Google Analytics, se desejar.
 
-Até a integração externa, os leads ficam no localStorage do navegador, na chave careerQuizLeads.
+O cadastro é enviado após a terceira pergunta, com status **Em andamento**. Ao
+terminar o teste, a mesma linha é atualizada para **Concluído**, sem criar outro
+lead. Como segurança adicional, os dados também ficam no `localStorage` do
+navegador, na chave `careerQuizLeads`.
 
 
 ## Integração com Google Sheets
@@ -30,3 +33,19 @@ Até a integração externa, os leads ficam no localStorage do navegador, na cha
 9. Envie um cadastro de teste. A aba **Leads** será criada automaticamente.
 
 Ao alterar o Apps Script no futuro, use **Implantar > Gerenciar implantações > Editar > Nova versão**. Salvar o código sem criar uma nova versão não atualiza a integração publicada.
+
+## Integração com o Brevo
+
+O envio ao Brevo acontece no Apps Script para que a chave secreta não fique
+exposta no site ou no GitHub.
+
+1. No projeto do Apps Script, abra **Configurações do projeto**.
+2. Em **Propriedades do script**, adicione `BREVO_API_KEY` com a chave da API.
+3. Adicione `BREVO_LIST_ID` com o mesmo ID numérico da lista usada pelo quiz
+   gastronômico.
+4. No editor, selecione a função `authorizeBrevo`, clique em **Executar** e
+   autorize o acesso quando o Google solicitar.
+5. Publique uma **nova versão** da implantação do Aplicativo da Web.
+
+A planilha recebe automaticamente as colunas **E-mail** e **Brevo**. A coluna
+Brevo mostra `Enviado` ou o motivo da falha, facilitando o diagnóstico.

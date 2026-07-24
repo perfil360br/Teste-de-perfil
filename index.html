@@ -55,9 +55,13 @@
   <div class="hero-copy">
     <div class="eyebrow"><i></i> Você já completou 30% do teste</div>
     <h1>Seu perfil começou a aparecer.</h1>
-    <p>Informe seu primeiro nome e WhatsApp para continuar e receber seu resultado personalizado no final.</p>
+    <p>Informe seu primeiro nome, WhatsApp e e-mail para continuar e receber seu resultado personalizado no final.</p>
     <form id="lead-form" class="welcome-form" novalidate>
-      <div class="welcome-fields"><label>Primeiro nome<input name="studentName" autocomplete="given-name" placeholder="Como podemos chamar você?" required></label><label>WhatsApp<input name="studentWhatsapp" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000" required></label></div>
+      <div class="welcome-fields">
+        <label>Primeiro nome<input name="studentName" autocomplete="given-name" placeholder="Como podemos chamar você?" required></label>
+        <label>WhatsApp<input name="studentWhatsapp" type="tel" inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000" required></label>
+        <label class="wide">E-mail<input name="studentEmail" type="email" inputmode="email" autocomplete="email" placeholder="voce@email.com" required></label>
+      </div>
       <p id="form-error" class="error" role="alert"></p>
       <button class="btn primary welcome-submit" type="submit">Continuar meu teste <span>→</span></button>
       <small class="secure">Resultado na hora. Sem custo.</small>
