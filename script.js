@@ -56,14 +56,31 @@ function select(key,b){
 }
 function calculate(){state.scores=Object.fromEntries(KEYS.map(k=>[k,0]));state.answers.forEach(k=>state.scores[k]++)}
 function mainProfile(){return KEYS.reduce((best,k)=>state.scores[k]>state.scores[best]?k:best)}
-function mask(e){let d=e.target.value.replace(/\D/g,"").slice(0,11);e.target.value=d.length<=2?"("+d:d.length<=6?d.replace(/(\d{2})(\d+)/,"($1) $2"):d.length<=10?d.replace(/(\d{2})(\d{4})(\d+)/,"($1) $2-$3"):d.replace(/(\d{2})(\d{5})(\d+)/,"($1) $2-$3")}
-function valid(form){let ok=true;form.querySelectorAll("[required]").forEach(f=>{const value=f.value.trim(),bad=!value||(f.type==="tel"&&value.replace(/\D/g,"").length<10)||(f.type==="email"&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value));f.classList.toggle("invalid",bad);if(bad)ok=false});return ok}
+const VALID_BRAZIL_DDDS=new Set(["11","12","13","14","15","16","17","18","19","21","22","24","27","28","31","32","33","34","35","37","38","41","42","43","44","45","46","47","48","49","51","53","54","55","61","62","63","64","65","66","67","68","69","71","73","74","75","77","79","81","82","83","84","85","86","87","88","89","91","92","93","94","95","96","97","98","99"]);
+function phoneDigits(value){
+ let d=String(value||"").replace(/\D/g,"");
+ // Se a pessoa colar +55 ou digitar 55 antes do DDD, o DDI é removido.
+ while(d.startsWith("55")&&d.length>11)d=d.slice(2);
+ return d;
+}
+function isValidBrazilMobile(value){
+ const d=phoneDigits(value);
+ return d.length===11&&VALID_BRAZIL_DDDS.has(d.slice(0,2))&&d[2]==="9"&&!/^(\d)\1{10}$/.test(d);
+}
+function formatBrazilMobile(value){
+ const d=phoneDigits(value).slice(0,11);
+ if(d.length<=2)return d?"("+d:"";
+ if(d.length<=7)return d.replace(/(\d{2})(\d+)/,"($1) $2");
+ return d.replace(/(\d{2})(\d{5})(\d+)/,"($1) $2-$3");
+}
+function mask(e){e.target.value=formatBrazilMobile(e.target.value);e.target.classList.remove("invalid")}
+function valid(form){let ok=true;form.querySelectorAll("[required]").forEach(f=>{const value=f.value.trim(),bad=!value||(f.type==="tel"&&!isValidBrazilMobile(value))||(f.type==="email"&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value));f.classList.toggle("invalid",bad);if(!bad&&f.type==="tel")f.value=formatBrazilMobile(value);if(bad)ok=false});return ok}
 async function submitLead(e){
  e.preventDefault();const form=e.currentTarget;
- if(!valid(form)){$("#form-error").textContent="Preencha corretamente seu nome, WhatsApp e e-mail para continuar o teste.";form.querySelector(".invalid")?.focus();return}
+ if(!valid(form)){const phoneInvalid=form.querySelector('[name="studentWhatsapp"].invalid');$("#form-error").textContent=phoneInvalid?"Digite um celular válido com DDD, sem o 55. Ex.: (22) 99999-9999.":"Preencha corretamente seu nome, WhatsApp e e-mail para continuar o teste.";form.querySelector(".invalid")?.focus();return}
  $("#form-error").textContent="";const btn=form.querySelector("[type=submit]");btn.disabled=true;btn.textContent="Salvando…";
  const data=Object.fromEntries(new FormData(form));
- state.lead={id:crypto.randomUUID?crypto.randomUUID():"lead-"+Date.now(),createdAt:new Date().toISOString(),studentName:data.studentName.trim(),studentWhatsapp:data.studentWhatsapp.trim(),studentEmail:data.studentEmail.trim().toLowerCase(),profile:"",profileKey:"",scores:{},answers:[...state.answers],source:"quiz-perfil-carreira",status:"Em andamento"};
+ state.lead={id:crypto.randomUUID?crypto.randomUUID():"lead-"+Date.now(),createdAt:new Date().toISOString(),studentName:data.studentName.trim(),studentWhatsapp:formatBrazilMobile(data.studentWhatsapp),studentEmail:data.studentEmail.trim().toLowerCase(),profile:"",profileKey:"",scores:{},answers:[...state.answers],source:"quiz-perfil-carreira",status:"Em andamento"};
  await saveLead(state.lead);trackMetaStandard("Lead");track("lead_submitted",{stage:"after_3_questions"});
  continueQuizAfterLead();btn.disabled=false;btn.innerHTML='Continuar meu teste <span>→</span>';
 }
