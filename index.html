@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Descubra seu perfil de inteligência e os caminhos profissionais que combinam com você.">
+  <meta name="description" content="Pesquisa de perfil da Microlins Nova Friburgo para descobrir talentos, caminhos profissionais e cursos compatíveis.">
   <meta name="theme-color" content="#0758d5">
-  <title>Teste de Perfil de Inteligência e Carreira</title>
+  <title>Teste de Perfil | Microlins Nova Friburgo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20260728-1">
   <!-- Meta Pixel Code -->
   <script>
   !function(f,b,e,v,n,t,s)
@@ -30,20 +30,26 @@
   <!-- GOOGLE ANALYTICS: cole a tag gtag.js aqui. -->
 </head>
 <body>
-<header class="topbar"><a class="brand" href="#" aria-label="Início"><b>P</b> Próximo<span>Passo</span></a><span class="badge">Teste gratuito • 3 min</span></header>
+<header class="topbar">
+  <a class="brand" href="#" aria-label="Microlins Nova Friburgo — início">
+    <img src="microlins-logo.png" alt="Microlins">
+    <span class="brand-unit">Nova Friburgo</span>
+  </a>
+  <span class="badge">@microlinsfriburgo • Teste gratuito</span>
+</header>
 <main>
 <section id="welcome" class="screen welcome active">
   <div class="hero-copy">
-    <div class="eyebrow"><i></i> Seu futuro começa com autoconhecimento</div>
+    <div class="eyebrow"><i></i> Pesquisa de perfil • Microlins Nova Friburgo</div>
     <h1>Qual talento pode levar você <em>mais longe?</em></h1>
-    <p>Responda 3 perguntas rápidas, libere a continuação do teste e descubra quais cursos combinam com seu jeito de pensar, criar e agir.</p>
+    <p>Participe da pesquisa de perfil da Microlins Nova Friburgo e descubra quais talentos, carreiras e cursos combinam com seu jeito de pensar, criar e agir.</p>
     <div class="welcome-form">
       <button id="start-test" class="btn primary welcome-submit" type="button">Começar meu teste gratuito <span>→</span></button>
       <small class="secure">Resultado personalizado em poucos minutos.</small>
     </div>
   </div>
   <div class="hero-art" aria-hidden="true"><div class="profile-card"><label>SEU PERFIL</label><div class="spark">✦</div><strong>5 perfis.<br>Um combina mais com você.</strong><div><span>Criativo</span><span>Analítico</span><span>Executor</span><span>Social</span><span>Comercial</span></div></div><aside class="float one"><b>10</b> perguntas rápidas</aside><aside class="float two">✓ <b>Resultado<br>personalizado</b></aside></div>
-  <div class="trust"><span>✓ Rápido e gratuito</span><span>✓ Resultado personalizado</span><span>✓ Sugestões de carreira</span></div>
+  <div class="trust"><span>✓ Pesquisa Microlins Nova Friburgo</span><span>✓ Resultado personalizado</span><span>✓ Sugestões de carreira</span></div>
 </section>
 <section id="quiz" class="screen quiz" aria-live="polite">
   <div class="progress-copy"><span id="progress-label"></span><b id="progress-percent"></b></div>
@@ -74,7 +80,32 @@
   <div class="result-head"><div class="eyebrow light">Seu perfil predominante é</div><div id="result-icon" class="result-icon"></div><h2 id="result-title"></h2><p id="result-summary"></p></div>
   <div class="result-body"><article class="score-card"><h3>Seu mapa de talentos</h3><p>Todo mundo tem um pouco de cada perfil. Veja como ficaram suas respostas:</p><div id="score-list"></div></article>
     <div class="result-grid"><article class="info-card"><i>⚡</i><h3>Seus pontos fortes</h3><ul id="strengths"></ul></article><article class="info-card"><i>🚀</i><h3>Profissões que combinam</h3><div id="careers" class="chips"></div></article><article class="info-card courses"><i>🎓</i><h3>Cursos para começar</h3><ul id="courses"></ul></article></div>
-    <aside class="cta"><div><div class="eyebrow light">Dê o próximo passo</div><h3>Quer transformar seu talento em profissão?</h3><p>Fale com nossa equipe e descubra o curso ideal para você.</p></div><a id="whatsapp" class="btn whatsapp" target="_blank" rel="noopener">Falar com a equipe no WhatsApp ↗</a></aside>
+    <aside id="offer-card" class="offer-card">
+      <div class="offer-ribbon">Benefício liberado após a conclusão do teste</div>
+      <div class="offer-layout">
+        <div class="offer-copy">
+          <div class="eyebrow light">Condição especial Microlins Nova Friburgo</div>
+          <h3><span id="offer-student"></span>, sua recomendação começa por <strong id="offer-course"></strong>.</h3>
+          <p>Seu resultado foi <b id="offer-profile"></b>. Ao concluir o teste, você liberou uma condição de matrícula para participantes desta pesquisa.</p>
+        </div>
+        <div class="offer-price" aria-label="Matrícula de cento e noventa e nove reais por um real">
+          <span>Matrícula</span>
+          <del>R$ 199,00</del>
+          <strong>R$ 1,00</strong>
+        </div>
+      </div>
+      <div class="offer-action">
+        <div class="countdown-wrap">
+          <span>Tempo para solicitar pelo WhatsApp</span>
+          <div id="offer-timer" class="countdown" role="timer" aria-live="polite">20:00</div>
+          <small id="offer-status">O prazo continua correndo mesmo se a página for atualizada.</small>
+        </div>
+        <a id="whatsapp" class="btn whatsapp" target="_blank" rel="noopener">Solicitar matrícula por R$ 1 ↗</a>
+      </div>
+      <p class="offer-terms">
+        *Condição destinada a novos alunos que concluíram esta pesquisa e válida para todos os cursos oferecidos pela unidade Microlins Nova Friburgo. O valor promocional de R$ 1 refere-se exclusivamente à taxa de matrícula, cujo valor normal é R$ 199. Mensalidades, material didático e outros itens contratados são cobrados separadamente. Benefício pessoal e intransferível, sujeito à confirmação da unidade.
+      </p>
+    </aside>
     <button id="restart" class="text-btn">↻ Refazer o teste</button>
   </div>
 </section>
@@ -86,6 +117,6 @@
     <a href="/exclusao-de-dados.html">Exclusão de Dados</a>
   </nav>
 </footer>
-<script src="script.js"></script>
+<script src="script.js?v=20260728-1"></script>
 </body>
 </html>

@@ -4,15 +4,37 @@ Projeto estático e mobile-first para captação de leads interessados em cursos
 
 ## Publicação
 
-Publique index.html, styles.css e script.js juntos no GitHub Pages, Netlify, Vercel ou hospedagem da instituição.
+Publique `index.html`, `styles.css`, `script.js`, `microlins-logo.png`,
+`privacy.html` e `exclusao-de-dados.html` juntos no GitHub Pages, Cloudflare
+Pages, Netlify, Vercel ou hospedagem da instituição.
+
+Depois da publicação, use estes endereços nas configurações do aplicativo da Meta:
+
+- Política de Privacidade: `https://teste-de-perfil.pages.dev/privacy.html`
+- Exclusão de dados: `https://teste-de-perfil.pages.dev/exclusao-de-dados.html`
 
 ## Antes de publicar
 
-1. Em script.js, troque teamWhatsapp pelo número oficial.
-2. Em index.html, personalize a marca provisória PróximoPasso.
-3. Confirme a URL do Apps Script em `SHEETS_WEB_APP_URL`.
-4. Configure a chave e a lista do Brevo nas propriedades do Apps Script.
-5. Confira o Pixel da Meta e adicione Google Analytics, se desejar.
+1. Confirme se `teamWhatsapp` é o número oficial da unidade.
+2. Confirme a URL do Apps Script em `SHEETS_WEB_APP_URL`.
+3. Configure a chave e a lista do Brevo nas propriedades do Apps Script.
+4. Confira o Pixel da Meta e adicione Google Analytics, se desejar.
+5. Confirme por escrito as regras comerciais da oferta antes de anunciá-la.
+
+O arquivo `microlins-logo.png` foi obtido do
+[site oficial da Microlins](https://microlins.com.br/wp-content/uploads/2025/12/Logo-Microlins.png).
+
+## Oferta após o resultado
+
+Após a conclusão, o site recomenda o primeiro curso do perfil e exibe a
+condição de matrícula de R$ 199 por R$ 1. O contador de 20 minutos é salvo no
+navegador pelo WhatsApp informado e não reinicia ao atualizar a página. Quando
+o prazo termina, o botão passa a consultar disponibilidade com a equipe.
+
+A promoção foi informada como autorizada pela unidade, válida para todos os
+cursos oferecidos. O preço normal da matrícula é R$ 199 e o preço promocional
+é R$ 1. Mensalidades, material didático e outros itens contratados são cobrados
+separadamente.
 
 O cadastro é enviado após a terceira pergunta, com status **Em andamento**. Ao
 terminar o teste, a mesma linha é atualizada para **Concluído**, sem criar outro

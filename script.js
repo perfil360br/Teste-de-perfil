@@ -4,6 +4,8 @@
 const SHEETS_WEB_APP_URL="https://script.google.com/macros/s/AKfycbxMsj3rc4QwEeRNpDLyvA46-iwS_OQryvxeNFVBdDGNKlaVId_tcyhl0GsvRNarIAVD/exec";
 
 const LEAD_GATE_AFTER=3;
+const OFFER_DURATION_MS=20*60*1000;
+let offerTimerId=null;
 
 const PROFILES={
  creative:{name:"Criativo Comunicador",icon:"✦",summary:"Você enxerga possibilidades onde outras pessoas veem o comum. Ideias, expressão e conexão são seus combustíveis — seu talento cresce quando pode criar e comunicar.",strengths:["Criatividade e imaginação","Comunicação envolvente","Facilidade para gerar ideias","Sensibilidade estética e cultural"],careers:["Design","Marketing","Publicidade","Conteúdo","Fotografia","Eventos"],courses:["Marketing Digital","Oratória","Canva","Design Gráfico"]},
@@ -139,9 +141,55 @@ function renderResult(key){
  const p=PROFILES[key];$("#result-icon").textContent=p.icon;$("#result-title").textContent=p.name;$("#result-summary").textContent=p.summary;
  $("#strengths").innerHTML=p.strengths.map(x=>"<li>"+x+"</li>").join("");$("#careers").innerHTML=p.careers.map(x=>"<span>"+x+"</span>").join("");$("#courses").innerHTML=p.courses.map(x=>"<li>"+x+"</li>").join("");
  $("#score-list").innerHTML=Object.entries(state.scores).sort((a,b)=>b[1]-a[1]).map(([k,v])=>{const pc=Math.round(v/Q.length*100);return '<div class="score-row"><span>'+PROFILES[k].name+'</span><div class="score-track"><div class="score-fill" style="width:'+pc+'%"></div></div><span>'+pc+'%</span></div>'}).join("");
- // Troque abaixo pelo WhatsApp oficial com DDI + DDD, somente números.
- const teamWhatsapp="5522998200315",student=(state.lead.studentName||"").split(" ")[0],msg=encodeURIComponent("Olá! Sou "+student+" e fiz o Teste de Perfil. Meu resultado foi "+p.name+". Quero saber mais sobre os cursos.");
- $("#whatsapp").href="https://wa.me/"+teamWhatsapp+"?text="+msg;
+ const student=(state.lead.studentName||"").split(" ")[0];
+ $("#offer-student").textContent=student;
+ $("#offer-profile").textContent=p.name;
+ $("#offer-course").textContent=p.courses[0];
+ startOfferCountdown(p,student);
+ track("offer_viewed",{profile:key,recommended_course:p.courses[0],offer:"matricula_1_real"});
+}
+function offerDeadlineKey(){
+ const contact=phoneDigits(state.lead?.studentWhatsapp||"");
+ return "careerQuizOfferDeadline:"+(contact||state.lead?.id||"anonymous");
+}
+function getOfferDeadline(){
+ const key=offerDeadlineKey(),saved=Number(localStorage.getItem(key));
+ if(Number.isFinite(saved)&&saved>0)return saved;
+ const deadline=Date.now()+OFFER_DURATION_MS;
+ localStorage.setItem(key,String(deadline));
+ return deadline;
+}
+function setOfferWhatsapp(p,student,expired){
+ const teamWhatsapp="5522998200315";
+ const message=expired
+  ?"Olá! Sou "+student+", concluí o Teste de Perfil e meu resultado foi "+p.name+". Minha recomendação foi "+p.courses[0]+". O prazo exibido terminou e quero consultar se a condição de matrícula ainda está disponível."
+  :"Olá! Sou "+student+", concluí o Teste de Perfil e meu resultado foi "+p.name+". Minha recomendação foi "+p.courses[0]+". Quero solicitar a condição de matrícula de R$ 199 por R$ 1 dentro do prazo.";
+ $("#whatsapp").href="https://wa.me/"+teamWhatsapp+"?text="+encodeURIComponent(message);
+ $("#whatsapp").textContent=expired?"Consultar disponibilidade no WhatsApp ↗":"Solicitar matrícula por R$ 1 ↗";
+}
+function startOfferCountdown(p,student){
+ if(offerTimerId)clearInterval(offerTimerId);
+ const deadline=getOfferDeadline(),card=$("#offer-card"),timer=$("#offer-timer"),status=$("#offer-status");
+ let expirationTracked=false;
+ const update=()=>{
+  const remaining=Math.max(0,deadline-Date.now());
+  const minutes=Math.floor(remaining/60000),seconds=Math.floor((remaining%60000)/1000);
+  timer.textContent=String(minutes).padStart(2,"0")+":"+String(seconds).padStart(2,"0");
+  if(remaining>0){
+   card.classList.remove("expired");
+   status.textContent="O prazo continua correndo mesmo se a página for atualizada.";
+   setOfferWhatsapp(p,student,false);
+   return;
+  }
+  clearInterval(offerTimerId);offerTimerId=null;
+  card.classList.add("expired");
+  status.textContent="O prazo terminou. Consulte a equipe para verificar se ainda há disponibilidade.";
+  setOfferWhatsapp(p,student,true);
+  if(!expirationTracked){track("offer_expired",{profile:state.lead?.profileKey});expirationTracked=true}
+ };
+ update();
+ if(Date.now()<deadline)offerTimerId=setInterval(update,1000);
+ $("#whatsapp").onclick=()=>{trackMetaStandard("Contact");track("offer_whatsapp_clicked",{profile:state.lead?.profileKey,recommended_course:p.courses[0],expired:Date.now()>=deadline})};
 }
 function track(name,params={}){
  if(window.fbq) window.fbq("trackCustom",name,params);
@@ -157,5 +205,5 @@ $("#back").onclick=()=>{if(state.current>0){state.current--;renderQuestion()}};
 $("#gate-back").onclick=()=>{state.current=LEAD_GATE_AFTER-1;renderQuestion();show("quiz")};
 document.querySelectorAll('input[type="tel"]').forEach(x=>x.addEventListener("input",mask));
 $("#lead-form").addEventListener("submit",submitLead);
-$("#restart").onclick=()=>{state.current=0;state.answers=[];state.scores={};state.lead=null;$("#lead-form").reset();show("welcome")};
+$("#restart").onclick=()=>{if(offerTimerId){clearInterval(offerTimerId);offerTimerId=null}state.current=0;state.answers=[];state.scores={};state.lead=null;$("#lead-form").reset();show("welcome")};
 window.addEventListener("beforeunload",e=>{if(state.answers.length&&!state.lead){e.preventDefault();e.returnValue=""}});
