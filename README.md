@@ -27,7 +27,7 @@ O arquivo `microlins-logo.png` foi obtido do
 ## Oferta após o resultado
 
 Após a conclusão, o site recomenda o primeiro curso do perfil e exibe a
-condição de matrícula de R$ 199 por R$ 1. O contador de 20 minutos é salvo no
+condição de matrícula de R$ 199 por R$ 1. O contador de 5 minutos é salvo no
 navegador pelo WhatsApp informado e não reinicia ao atualizar a página. Quando
 o prazo termina, o botão passa a consultar disponibilidade com a equipe.
 
@@ -36,10 +36,15 @@ cursos oferecidos. O preço normal da matrícula é R$ 199 e o preço promociona
 é R$ 1. Mensalidades, material didático e outros itens contratados são cobrados
 separadamente.
 
-O cadastro é enviado após a terceira pergunta, com status **Em andamento**. Ao
-terminar o teste, a mesma linha é atualizada para **Concluído**, sem criar outro
-lead. Como segurança adicional, os dados também ficam no `localStorage` do
-navegador, na chave `careerQuizLeads`.
+Ao clicar no botão da oferta, a mesma linha do lead recebe automaticamente as
+informações **Clicou no WhatsApp**, **Data do clique no WhatsApp** e
+**Clique após o prazo**. O marcador registra a abertura do link, não confirma
+que a mensagem foi enviada no WhatsApp.
+
+O cadastro é enviado na tela inicial, antes da primeira pergunta, com status
+**Em andamento**. Ao terminar o teste, a mesma linha é atualizada para
+**Concluído**, sem criar outro lead. Como segurança adicional, os dados também
+ficam no `localStorage` do navegador, na chave `careerQuizLeads`.
 
 
 ## Integração com Google Sheets
