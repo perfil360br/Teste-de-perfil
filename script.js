@@ -4,7 +4,7 @@
 const SHEETS_WEB_APP_URL="https://script.google.com/macros/s/AKfycbxMsj3rc4QwEeRNpDLyvA46-iwS_OQryvxeNFVBdDGNKlaVId_tcyhl0GsvRNarIAVD/exec";
 
 const LEAD_GATE_AFTER=3;
-const OFFER_DURATION_MS=20*60*1000;
+const OFFER_DURATION_MS=5*60*1000;
 let offerTimerId=null;
 
 const PROFILES={
@@ -150,7 +150,7 @@ function renderResult(key){
 }
 function offerDeadlineKey(){
  const contact=phoneDigits(state.lead?.studentWhatsapp||"");
- return "careerQuizOfferDeadline:"+(contact||state.lead?.id||"anonymous");
+ return "careerQuizOfferDeadline5min:"+(contact||state.lead?.id||"anonymous");
 }
 function getOfferDeadline(){
  const key=offerDeadlineKey(),saved=Number(localStorage.getItem(key));
@@ -189,7 +189,20 @@ function startOfferCountdown(p,student){
  };
  update();
  if(Date.now()<deadline)offerTimerId=setInterval(update,1000);
- $("#whatsapp").onclick=()=>{trackMetaStandard("Contact");track("offer_whatsapp_clicked",{profile:state.lead?.profileKey,recommended_course:p.courses[0],expired:Date.now()>=deadline})};
+ $("#whatsapp").onclick=()=>{
+  const expired=Date.now()>=deadline;
+  state.lead={
+   ...state.lead,
+   whatsappClicked:true,
+   whatsappClickedAt:new Date().toISOString(),
+   whatsappClickedAfterExpiry:expired
+  };
+  // Atualiza a mesma linha do lead antes de abrir o WhatsApp.
+  // Como o link abre em outra aba e saveLead usa keepalive, o clique não é interrompido.
+  saveLead(state.lead);
+  trackMetaStandard("Contact");
+  track("offer_whatsapp_clicked",{profile:state.lead?.profileKey,recommended_course:p.courses[0],expired});
+ };
 }
 function track(name,params={}){
  if(window.fbq) window.fbq("trackCustom",name,params);
