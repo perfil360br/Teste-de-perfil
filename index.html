@@ -42,11 +42,17 @@
   <div class="hero-copy">
     <div class="eyebrow"><i></i> Pesquisa de perfil • Microlins Nova Friburgo</div>
     <h1>Qual talento pode levar você <em>mais longe?</em></h1>
-    <p>Participe da pesquisa de perfil da Microlins Nova Friburgo e descubra quais talentos, carreiras e cursos combinam com seu jeito de pensar, criar e agir.</p>
-    <div class="welcome-form">
-      <button id="start-test" class="btn primary welcome-submit" type="button">Começar meu teste gratuito <span>→</span></button>
-      <small class="secure">Resultado personalizado em poucos minutos.</small>
-    </div>
+    <p>Preencha seus dados para começar a pesquisa da Microlins Nova Friburgo e descobrir quais talentos, carreiras e cursos combinam com você.</p>
+    <form id="lead-form" class="welcome-form" novalidate>
+      <div class="welcome-fields">
+        <label>Primeiro nome<input name="studentName" autocomplete="given-name" placeholder="Como podemos chamar você?" required></label>
+        <label>WhatsApp<input name="studentWhatsapp" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="20" placeholder="(22) 99999-9999" aria-describedby="whatsapp-help" required><small id="whatsapp-help" class="phone-hint">Digite DDD + celular. Se informar +55, nós removemos automaticamente.</small></label>
+        <label class="wide">E-mail<input name="studentEmail" type="email" inputmode="email" autocomplete="email" placeholder="voce@email.com" required></label>
+      </div>
+      <p id="form-error" class="error" role="alert"></p>
+      <button class="btn primary welcome-submit" type="submit">Começar meu teste gratuito <span>→</span></button>
+      <small class="secure">Seus dados são registrados ao começar. Resultado na hora e sem custo.</small>
+    </form>
   </div>
   <div class="hero-art" aria-hidden="true"><div class="profile-card"><label>SEU PERFIL</label><div class="spark">✦</div><strong>5 perfis.<br>Um combina mais com você.</strong><div><span>Criativo</span><span>Analítico</span><span>Executor</span><span>Social</span><span>Comercial</span></div></div><aside class="float one"><b>10</b> perguntas rápidas</aside><aside class="float two">✓ <b>Resultado<br>personalizado</b></aside></div>
   <div class="trust"><span>✓ Pesquisa Microlins Nova Friburgo</span><span>✓ Resultado personalizado</span><span>✓ Sugestões de carreira</span></div>
@@ -56,25 +62,6 @@
   <div class="progress" role="progressbar" aria-valuemin="1" aria-valuemax="10"><i id="progress-bar"></i></div>
   <article class="quiz-card"><b id="question-number" class="number"></b><h2 id="question-title"></h2><p>Escolha a alternativa que mais combina com você.</p><div id="answers" class="answers"></div></article>
   <button id="back" class="text-btn">← Voltar</button>
-</section>
-<section id="lead-gate" class="screen welcome lead-screen">
-  <div class="hero-copy">
-    <div class="eyebrow"><i></i> Você já completou 30% do teste</div>
-    <h1>Seu perfil começou a aparecer.</h1>
-    <p>Informe seu primeiro nome, WhatsApp e e-mail para continuar e receber seu resultado personalizado no final.</p>
-    <form id="lead-form" class="welcome-form" novalidate>
-      <div class="welcome-fields">
-        <label>Primeiro nome<input name="studentName" autocomplete="given-name" placeholder="Como podemos chamar você?" required></label>
-        <label>WhatsApp<input name="studentWhatsapp" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="20" placeholder="(22) 99999-9999" aria-describedby="whatsapp-help" required><small id="whatsapp-help" class="phone-hint">Digite DDD + celular. Se informar +55, nós removemos automaticamente.</small></label>
-        <label class="wide">E-mail<input name="studentEmail" type="email" inputmode="email" autocomplete="email" placeholder="voce@email.com" required></label>
-      </div>
-      <p id="form-error" class="error" role="alert"></p>
-      <button class="btn primary welcome-submit" type="submit">Continuar meu teste <span>→</span></button>
-      <small class="secure">Resultado na hora. Sem custo.</small>
-    </form>
-    <button id="gate-back" class="text-btn">← Voltar para a pergunta anterior</button>
-  </div>
-  <div class="hero-art" aria-hidden="true"><div class="profile-card"><label>EM ANDAMENTO</label><div class="spark">30%</div><strong>Falta pouco para revelar seu perfil.</strong><div><span>Cursos</span><span>Carreira</span><span>Talentos</span></div></div><aside class="float one"><b>7</b> perguntas restantes</aside><aside class="float two">✓ <b>Resultado<br>liberado</b></aside></div>
 </section>
 <section id="result" class="screen result">
   <div class="result-head"><div class="eyebrow light">Seu perfil predominante é</div><div id="result-icon" class="result-icon"></div><h2 id="result-title"></h2><p id="result-summary"></p></div>
@@ -117,6 +104,6 @@
     <a href="/exclusao-de-dados.html">Exclusão de Dados</a>
   </nav>
 </footer>
-<script src="script.js?v=20260728-3"></script>
+<script src="script.js?v=20260728-4"></script>
 </body>
 </html>

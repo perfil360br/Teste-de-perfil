@@ -1,9 +1,10 @@
 "use strict";
 
 // URL gerada ao implantar o Google Apps Script como Aplicativo da Web.
-const SHEETS_WEB_APP_URL="https://script.google.com/macros/s/AKfycbxMsj3rc4QwEeRNpDLyvA46-iwS_OQryvxeNFVBdDGNKlaVId_tcyhl0GsvRNarIAVD/exec";
+const SHEETS_WEB_APP_URL=["localhost","127.0.0.1"].includes(location.hostname)
+ ? ""
+ : "https://script.google.com/macros/s/AKfycbxMsj3rc4QwEeRNpDLyvA46-iwS_OQryvxeNFVBdDGNKlaVId_tcyhl0GsvRNarIAVD/exec";
 
-const LEAD_GATE_AFTER=3;
 const OFFER_DURATION_MS=5*60*1000;
 let offerTimerId=null;
 
@@ -39,7 +40,6 @@ const $=s=>document.querySelector(s);
 const screens=document.querySelectorAll(".screen");
 function show(id){screens.forEach(x=>x.classList.toggle("active",x.id===id));scrollTo({top:0,behavior:"smooth"})}
 function startQuiz(){state.current=0;renderQuestion();track("quiz_started");show("quiz")}
-function continueQuizAfterLead(){state.current=LEAD_GATE_AFTER;renderQuestion();show("quiz")}
 function renderQuestion(){
  const q=Q[state.current],n=state.current+1,p=Math.round(n/Q.length*100);
  $("#question-title").textContent=q[0];$("#question-number").textContent=String(n).padStart(2,"0");
@@ -51,7 +51,6 @@ function renderQuestion(){
 function select(key,b){
  document.querySelectorAll(".answer").forEach(x=>x.classList.remove("selected"));b.classList.add("selected");state.answers[state.current]=key;
  setTimeout(async()=>{
-   if(state.current===LEAD_GATE_AFTER-1&&!state.lead){track("lead_gate_viewed",{after_questions:LEAD_GATE_AFTER});show("lead-gate");return}
    if(state.current<Q.length-1){state.current++;renderQuestion();scrollTo({top:0,behavior:"smooth"});return}
    await finishQuiz();
  },180)
@@ -83,8 +82,8 @@ async function submitLead(e){
  $("#form-error").textContent="";const btn=form.querySelector("[type=submit]");btn.disabled=true;btn.textContent="Salvando…";
  const data=Object.fromEntries(new FormData(form));
  state.lead={id:crypto.randomUUID?crypto.randomUUID():"lead-"+Date.now(),createdAt:new Date().toISOString(),studentName:data.studentName.trim(),studentWhatsapp:formatBrazilMobile(data.studentWhatsapp),studentEmail:data.studentEmail.trim().toLowerCase(),profile:"",profileKey:"",scores:{},answers:[...state.answers],source:"quiz-perfil-carreira",status:"Em andamento"};
- await saveLead(state.lead);trackMetaStandard("Lead");track("lead_submitted",{stage:"after_3_questions"});
- continueQuizAfterLead();btn.disabled=false;btn.innerHTML='Continuar meu teste <span>→</span>';
+ await saveLead(state.lead);trackMetaStandard("Lead");track("lead_submitted",{stage:"before_first_question"});
+ startQuiz();btn.disabled=false;btn.innerHTML='Começar meu teste gratuito <span>→</span>';
 }
 async function finishQuiz(){
  calculate();const key=mainProfile();
@@ -213,9 +212,7 @@ function trackMetaStandard(name,params={}){
  if(window.fbq) window.fbq("track",name,params);
  console.info("[Meta Pixel]",name,params);
 }
-$("#start-test").onclick=startQuiz;
 $("#back").onclick=()=>{if(state.current>0){state.current--;renderQuestion()}};
-$("#gate-back").onclick=()=>{state.current=LEAD_GATE_AFTER-1;renderQuestion();show("quiz")};
 document.querySelectorAll('input[type="tel"]').forEach(x=>x.addEventListener("input",mask));
 $("#lead-form").addEventListener("submit",submitLead);
 $("#restart").onclick=()=>{if(offerTimerId){clearInterval(offerTimerId);offerTimerId=null}state.current=0;state.answers=[];state.scores={};state.lead=null;$("#lead-form").reset();show("welcome")};
