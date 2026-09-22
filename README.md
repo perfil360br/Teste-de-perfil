@@ -28,7 +28,9 @@ O arquivo `microlins-logo.png` foi obtido do
 
 Após a conclusão, o site recomenda o primeiro curso do perfil e exibe a
 condição de matrícula de R$ 199 por R$ 1. O contador de 5 minutos é salvo no
-navegador pelo WhatsApp informado e não reinicia ao atualizar a página. Quando
+navegador pelo WhatsApp informado e não reinicia ao atualizar a página quando
+o armazenamento local está disponível. Se estiver bloqueado ou cheio, o prazo
+é mantido apenas enquanto a página permanece aberta. Quando
 o prazo termina, o botão passa a consultar disponibilidade com a equipe.
 
 A promoção foi informada como autorizada pela unidade, válida para todos os
@@ -44,7 +46,8 @@ que a mensagem foi enviada no WhatsApp.
 O cadastro é enviado na tela inicial, antes da primeira pergunta, com status
 **Em andamento**. Ao terminar o teste, a mesma linha é atualizada para
 **Concluído**, sem criar outro lead. Como segurança adicional, os dados também
-ficam no `localStorage` do navegador, na chave `careerQuizLeads`.
+ficam no `localStorage` do navegador, na chave `careerQuizLeads`, quando disponível.
+Falhas nesse backup não impedem a tentativa de envio à planilha.
 
 
 ## Integração com Google Sheets
@@ -60,6 +63,16 @@ ficam no `localStorage` do navegador, na chave `careerQuizLeads`.
 9. Envie um cadastro de teste. A aba **Leads** será criada automaticamente.
 
 Ao alterar o Apps Script no futuro, use **Implantar > Gerenciar implantações > Editar > Nova versão**. Salvar o código sem criar uma nova versão não atualiza a integração publicada.
+
+### Aplicar as correções da revisão
+
+Republique o `script.js` na hospedagem e atualize o código do Apps Script,
+publicando uma nova versão da implantação. Execute `repairMetaAdsDailyCounts`
+para atualizar e verificar as fórmulas existentes de contagem diária na aba **Meta Ads**,
+mesmo que a API da Meta esteja indisponível.
+Essa atualização também ocorrerá na próxima sincronização agendada.
+Os limites da contagem usam o dia civil no fuso da planilha, incluindo registros
+antigos cuja data do relatório continha horário.
 
 ## Integração com o Brevo
 

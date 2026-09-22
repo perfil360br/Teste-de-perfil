@@ -16,7 +16,10 @@ const HEADERS = [
   "Origem",
   "Status",
   "E-mail",
-  "Brevo"
+  "Brevo",
+  "Clicou no WhatsApp",
+  "Data do clique no WhatsApp",
+  "Clique após o prazo"
 ];
 
 function doGet() {
@@ -114,6 +117,9 @@ function saveToSheet(lead, brevoResult) {
     .setBackground("#0758d5")
     .setFontColor("#ffffff");
   sheet.setFrozenRows(1);
+  sheet
+    .getRange(2, 14, Math.max(sheet.getMaxRows() - 1, 1), 1)
+    .setNumberFormat("dd/mm/yyyy HH:mm:ss");
 
   const row = [
     safeCell(lead.id),
@@ -127,7 +133,12 @@ function saveToSheet(lead, brevoResult) {
     safeCell(lead.source),
     safeCell(lead.status || "Em andamento"),
     safeCell(lead.studentEmail),
-    brevoResult.ok ? "Enviado" : "Falhou: " + safeCell(brevoResult.error)
+    brevoResult.ok ? "Enviado" : "Falhou: " + safeCell(brevoResult.error),
+    lead.whatsappClicked ? "Sim" : "Não",
+    lead.whatsappClickedAt ? new Date(lead.whatsappClickedAt) : "",
+    lead.whatsappClicked
+      ? (lead.whatsappClickedAfterExpiry ? "Sim" : "Não")
+      : ""
   ];
 
   const existingRow = findLeadRow(sheet, lead.id);
@@ -350,7 +361,7 @@ function setupMetaAdsDataSheet(sheet) {
   const formulas = [];
   for (let row = 2; row <= 1000; row++) {
     formulas.push([
-      '=IF(A' + row + '="";"";COUNTIFS(Leads!$B:$B;">="&A' + row + ';Leads!$B:$B;"<"&A' + row + '+1))',
+      dailyLeadCountFormula(row),
       '=IF(A' + row + '="";"";IFERROR(D' + row + '/J' + row + ';0))',
       '=IF(A' + row + '="";"";IFERROR(D' + row + '/K' + row + ';0))',
       '=IF(A' + row + '="";"";IFERROR(H' + row + '/E' + row + ';0))',
@@ -652,7 +663,7 @@ function syncMetaAdsInsights() {
     }
 
     const rowValues = [
-      parseMetaDate(insight.date_start),
+      parseMetaDate(insight.date_start, timezone),
       safeCell(insight.campaign_id),
       safeCell(insight.campaign_name),
       toNumber(insight.spend),
@@ -671,6 +682,7 @@ function syncMetaAdsInsights() {
     sheet.getRange(targetRow, 1, 1, rowValues.length).setValues([rowValues]);
   });
 
+  repairMetaAdsDailyCounts();
   sheet.getRange("A2:A" + sheet.getMaxRows()).setNumberFormat("dd/mm/yyyy");
   console.log(
     "Meta Ads sincronizado: " +
@@ -795,16 +807,31 @@ function normalizeSheetDateKey(value, timezone) {
   return match ? match[3] + "-" + match[2] + "-" + match[1] : String(value);
 }
 
-function parseMetaDate(value) {
-  const parts = String(value).split("-");
-  return new Date(
-    Number(parts[0]),
-    Number(parts[1]) - 1,
-    Number(parts[2]),
-    12,
-    0,
-    0
-  );
+function parseMetaDate(value, timezone) {
+  return Utilities.parseDate(String(value), timezone, "yyyy-MM-dd");
+}
+
+function dailyLeadCountFormula(row) {
+  // INT remove o horário das datas históricas: conta o dia civil completo.
+  return '=IF(A' + row + '="";"";COUNTIFS(Leads!$B:$B;">="&INT(A' + row + ');Leads!$B:$B;"<"&(INT(A' + row + ')+1)))';
+}
+
+// Permite corrigir o histórico mesmo quando a API da Meta está indisponível.
+function repairMetaAdsDailyCounts() {
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName("Meta Ads");
+  if (!sheet) throw new Error('A aba "Meta Ads" não existe.');
+  const dailyCounts = [];
+  for (let row = 2; row <= sheet.getMaxRows(); row++) {
+    dailyCounts.push([dailyLeadCountFormula(row)]);
+  }
+  const range = sheet.getRange(2, 11, dailyCounts.length, 1);
+  range.setFormulas(dailyCounts);
+  SpreadsheetApp.flush();
+  const errors = range.getDisplayValues().filter(function (row) {
+    return String(row[0]).charAt(0) === "#";
+  });
+  if (errors.length) throw new Error("Há erros nas fórmulas de contagem diária: " + errors.length);
+  console.log("Contagem diária corrigida e verificada em " + dailyCounts.length + " linhas.");
 }
 
 function toNumber(value) {
@@ -817,7 +844,7 @@ function copyMetaAdsFormulas(sheet, startRow, endRow) {
 
   for (let row = startRow; row <= endRow; row++) {
     formulas.push([
-      '=IF(A' + row + '="","",COUNTIFS(Leads!$B:$B,">="&A' + row + ',Leads!$B:$B,"<"&A' + row + '+1))',
+      dailyLeadCountFormula(row),
       '=IF(A' + row + '="","",IFERROR(D' + row + '/J' + row + ',0))',
       '=IF(A' + row + '="","",IFERROR(D' + row + '/K' + row + ',0))',
       '=IF(A' + row + '="","",IFERROR(H' + row + '/E' + row + ',0))',
