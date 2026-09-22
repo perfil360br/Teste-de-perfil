@@ -7,6 +7,7 @@ const SHEETS_WEB_APP_URL=["localhost","127.0.0.1"].includes(location.hostname)
 
 const OFFER_DURATION_MS=5*60*1000;
 let offerTimerId=null;
+const offerDeadlines=new Map();
 
 const PROFILES={
  creative:{name:"Criativo Comunicador",icon:"✦",summary:"Você enxerga possibilidades onde outras pessoas veem o comum. Ideias, expressão e conexão são seus combustíveis — seu talento cresce quando pode criar e comunicar.",strengths:["Criatividade e imaginação","Comunicação envolvente","Facilidade para gerar ideias","Sensibilidade estética e cultural"],careers:["Design","Marketing","Publicidade","Conteúdo","Fotografia","Eventos"],courses:["Marketing Digital","Oratória","Canva","Design Gráfico"]},
@@ -35,12 +36,13 @@ const Q=[
 // Mantém o teste curto: somente as dez primeiras perguntas são utilizadas.
 Q.length=10;
 const KEYS=["creative","analytical","practical","social","commercial"];
-const state={current:0,answers:[],scores:{},lead:null};
+const state={current:0,answers:[],scores:{},lead:null,transitioning:false};
 const $=s=>document.querySelector(s);
 const screens=document.querySelectorAll(".screen");
 function show(id){screens.forEach(x=>x.classList.toggle("active",x.id===id));scrollTo({top:0,behavior:"smooth"})}
 function startQuiz(){state.current=0;renderQuestion();track("quiz_started");show("quiz")}
 function renderQuestion(){
+ state.transitioning=false;$("#back").disabled=false;
  const q=Q[state.current],n=state.current+1,p=Math.round(n/Q.length*100);
  $("#question-title").textContent=q[0];$("#question-number").textContent=String(n).padStart(2,"0");
  $("#progress-label").textContent="Pergunta "+n+" de "+Q.length;$("#progress-percent").textContent=p+"%";$("#progress-bar").style.width=p+"%";
@@ -49,7 +51,9 @@ function renderQuestion(){
  q[1].forEach((label,i)=>{const b=document.createElement("button");b.type="button";b.className="answer"+(state.answers[state.current]===KEYS[i]?" selected":"");b.innerHTML='<span class="letter">'+String.fromCharCode(65+i)+'</span><span>'+label+'</span>';b.onclick=()=>select(KEYS[i],b);$("#answers").appendChild(b)});
 }
 function select(key,b){
- document.querySelectorAll(".answer").forEach(x=>x.classList.remove("selected"));b.classList.add("selected");state.answers[state.current]=key;
+ if(state.transitioning)return;
+ state.transitioning=true;$("#back").disabled=true;
+ document.querySelectorAll(".answer").forEach(x=>{x.classList.remove("selected");x.disabled=true});b.classList.add("selected");state.answers[state.current]=key;
  setTimeout(async()=>{
    if(state.current<Q.length-1){state.current++;renderQuestion();scrollTo({top:0,behavior:"smooth"});return}
    await finishQuiz();
@@ -80,10 +84,17 @@ async function submitLead(e){
  e.preventDefault();const form=e.currentTarget;
  if(!valid(form)){const phoneInvalid=form.querySelector('[name="studentWhatsapp"].invalid');$("#form-error").textContent=phoneInvalid?"Digite um celular válido com DDD, sem o 55. Ex.: (22) 99999-9999.":"Preencha corretamente seu nome, WhatsApp e e-mail para continuar o teste.";form.querySelector(".invalid")?.focus();return}
  $("#form-error").textContent="";const btn=form.querySelector("[type=submit]");btn.disabled=true;btn.textContent="Salvando…";
+ try{
  const data=Object.fromEntries(new FormData(form));
  state.lead={id:crypto.randomUUID?crypto.randomUUID():"lead-"+Date.now(),createdAt:new Date().toISOString(),studentName:data.studentName.trim(),studentWhatsapp:formatBrazilMobile(data.studentWhatsapp),studentEmail:data.studentEmail.trim().toLowerCase(),profile:"",profileKey:"",scores:{},answers:[...state.answers],source:"quiz-perfil-carreira",status:"Em andamento"};
  await saveLead(state.lead);trackMetaStandard("Lead");track("lead_submitted",{stage:"before_first_question"});
- startQuiz();btn.disabled=false;btn.innerHTML='Começar meu teste gratuito <span>→</span>';
+ startQuiz();
+ }catch(error){
+  console.error("Falha ao iniciar o teste:",error);
+  $("#form-error").textContent="Não foi possível iniciar o teste. Tente novamente.";
+ }finally{
+  btn.disabled=false;btn.innerHTML='Começar meu teste gratuito <span>→</span>';
+ }
 }
 async function finishQuiz(){
  calculate();const key=mainProfile();
@@ -91,15 +102,19 @@ async function finishQuiz(){
  await saveLead(state.lead);renderResult(key);track("quiz_completed",{profile:key});show("result");
 }
 async function saveLead(lead){
- // Backup local: o resultado nunca é perdido caso a internet esteja indisponível.
- const leads=JSON.parse(localStorage.getItem("careerQuizLeads")||"[]");
- const existingIndex=leads.findIndex(item=>item.id===lead.id);
- if(existingIndex>=0) leads[existingIndex]=lead; else leads.push(lead);
- localStorage.setItem("careerQuizLeads",JSON.stringify(leads));
+ // O backup é opcional: falhas locais não podem impedir o envio à planilha.
+ let savedLocally=false;
+ try{
+  const leads=JSON.parse(localStorage.getItem("careerQuizLeads")||"[]");
+  const existingIndex=leads.findIndex(item=>item.id===lead.id);
+  if(existingIndex>=0) leads[existingIndex]=lead; else leads.push(lead);
+  localStorage.setItem("careerQuizLeads",JSON.stringify(leads));
+  savedLocally=true;
+ }catch(error){console.warn("Backup local indisponível:",error)}
 
  if(!SHEETS_WEB_APP_URL||SHEETS_WEB_APP_URL.includes("SUA_URL")){
    console.warn("Google Sheets ainda não configurado: informe SHEETS_WEB_APP_URL.");
-   return {savedLocally:true,sentToSheets:false};
+   return {savedLocally,sentToSheets:false};
  }
 
  const payload=JSON.stringify(lead);
@@ -123,16 +138,16 @@ async function saveLead(lead){
      redirect:"follow",
      keepalive:true
     });
-    return {savedLocally:true,sentToSheets:true};
+    return {savedLocally,sentToSheets:true};
   }catch(error){
     console.error("Não foi possível enviar o lead ao Google Sheets:",error);
     // Em celulares, tenta enfileirar o envio caso a requisição principal seja interrompida.
-    if(navigator.sendBeacon){
+    try{if(navigator.sendBeacon){
       const queued=navigator.sendBeacon(SHEETS_WEB_APP_URL,new Blob([payload],{type:"text/plain;charset=utf-8"}));
       console.info("[Sheets] Beacon de contingência enviado/na fila:",queued);
-      return {savedLocally:true,sentToSheets:queued,error:error.message};
-    }
-    return {savedLocally:true,sentToSheets:false,error:error.message};
+      return {savedLocally,sentToSheets:queued,error:error.message};
+    }}catch(beaconError){console.warn("Falha no envio de contingência:",beaconError)}
+    return {savedLocally,sentToSheets:false,error:error.message};
   }
 }
 
@@ -152,10 +167,14 @@ function offerDeadlineKey(){
  return "careerQuizOfferDeadline5min:"+(contact||state.lead?.id||"anonymous");
 }
 function getOfferDeadline(){
- const key=offerDeadlineKey(),saved=Number(localStorage.getItem(key));
- if(Number.isFinite(saved)&&saved>0)return saved;
- const deadline=Date.now()+OFFER_DURATION_MS;
- localStorage.setItem(key,String(deadline));
+ const key=offerDeadlineKey();
+ try{
+  const saved=Number(localStorage.getItem(key));
+  if(Number.isFinite(saved)&&saved>0){offerDeadlines.set(key,saved);return saved}
+ }catch(error){console.warn("Prazo local indisponível:",error)}
+ const deadline=offerDeadlines.get(key)||Date.now()+OFFER_DURATION_MS;
+ offerDeadlines.set(key,deadline);
+ try{localStorage.setItem(key,String(deadline))}catch(error){console.warn("Prazo mantido apenas nesta sessão:",error)}
  return deadline;
 }
 function setOfferWhatsapp(p,student,expired){
@@ -176,7 +195,7 @@ function startOfferCountdown(p,student){
   timer.textContent=String(minutes).padStart(2,"0")+":"+String(seconds).padStart(2,"0");
   if(remaining>0){
    card.classList.remove("expired");
-   status.textContent="O prazo continua correndo mesmo se a página for atualizada.";
+   status.textContent="O prazo para solicitar esta condição está correndo.";
    setOfferWhatsapp(p,student,false);
    return;
   }
@@ -212,7 +231,7 @@ function trackMetaStandard(name,params={}){
  if(window.fbq) window.fbq("track",name,params);
  console.info("[Meta Pixel]",name,params);
 }
-$("#back").onclick=()=>{if(state.current>0){state.current--;renderQuestion()}};
+$("#back").onclick=()=>{if(!state.transitioning&&state.current>0){state.current--;renderQuestion()}};
 document.querySelectorAll('input[type="tel"]').forEach(x=>x.addEventListener("input",mask));
 $("#lead-form").addEventListener("submit",submitLead);
 $("#restart").onclick=()=>{if(offerTimerId){clearInterval(offerTimerId);offerTimerId=null}state.current=0;state.answers=[];state.scores={};state.lead=null;$("#lead-form").reset();show("welcome")};
