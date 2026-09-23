@@ -16,7 +16,10 @@ export async function onRequestPost({ request }) {
       body: JSON.stringify(lead),
       redirect: "follow",
     });
-    if (!upstream.ok) return json({ ok: false, error: "Falha ao salvar o cadastro." }, 502, request);
+    if (!upstream.ok) {
+      console.error("Apps Script respondeu com HTTP", upstream.status);
+      return json({ ok: false, error: "Falha ao salvar o cadastro.", upstreamStatus: upstream.status }, 502, request);
+    }
     const result = await upstream.json();
     if (!result.ok || result.id !== lead.id) {
       return json({ ok: false, error: result.error || "Cadastro não confirmado." }, 502, request);
