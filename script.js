@@ -1,9 +1,8 @@
 "use strict";
 
-// URL gerada ao implantar o Google Apps Script como Aplicativo da Web.
-const SHEETS_WEB_APP_URL=["localhost","127.0.0.1"].includes(location.hostname)
- ? ""
- : "https://script.google.com/macros/s/AKfycbxMsj3rc4QwEeRNpDLyvA46-iwS_OQryvxeNFVBdDGNKlaVId_tcyhl0GsvRNarIAVD/exec";
+// O endpoint do Pages confirma a gravação antes de liberar o teste.
+const VERIFIED_LEAD_ENDPOINT=location.hostname==="perfil360br.github.io"
+ ? "https://teste-de-perfil.pages.dev/api/lead" : "/api/lead";
 
 const OFFER_DURATION_MS=5*60*1000;
 let offerTimerId=null;
@@ -86,12 +85,17 @@ async function submitLead(e){
  $("#form-error").textContent="";const btn=form.querySelector("[type=submit]");btn.disabled=true;btn.textContent="Salvando…";
  try{
  const data=Object.fromEntries(new FormData(form));
- state.lead={id:crypto.randomUUID?crypto.randomUUID():"lead-"+Date.now(),createdAt:new Date().toISOString(),studentName:data.studentName.trim(),studentWhatsapp:formatBrazilMobile(data.studentWhatsapp),studentEmail:data.studentEmail.trim().toLowerCase(),profile:"",profileKey:"",scores:{},answers:[...state.answers],source:"quiz-perfil-carreira",status:"Em andamento"};
- await saveLead(state.lead);trackMetaStandard("Lead");track("lead_submitted",{stage:"before_first_question"});
+ const previous=state.lead;
+ const studentName=data.studentName.trim(),studentWhatsapp=formatBrazilMobile(data.studentWhatsapp),studentEmail=data.studentEmail.trim().toLowerCase();
+ const sameLead=previous&&previous.studentName===studentName&&previous.studentWhatsapp===studentWhatsapp&&previous.studentEmail===studentEmail;
+ state.lead={id:sameLead?previous.id:(crypto.randomUUID?crypto.randomUUID():"lead-"+Date.now()),createdAt:sameLead?previous.createdAt:new Date().toISOString(),studentName,studentWhatsapp,studentEmail,profile:"",profileKey:"",scores:{},answers:[...state.answers],source:"quiz-perfil-carreira",status:"Em andamento"};
+ const saved=await saveLead(state.lead);
+ if(!saved.sentToSheets)throw new Error("Cadastro não confirmado pelo servidor.");
+ trackMetaStandard("Lead");track("lead_submitted",{stage:"before_first_question"});
  startQuiz();
  }catch(error){
   console.error("Falha ao iniciar o teste:",error);
-  $("#form-error").textContent="Não foi possível iniciar o teste. Tente novamente.";
+  $("#form-error").textContent="Não foi possível confirmar seu cadastro. Tente novamente.";
  }finally{
   btn.disabled=false;btn.innerHTML='Começar meu teste gratuito <span>→</span>';
  }
@@ -99,7 +103,18 @@ async function submitLead(e){
 async function finishQuiz(){
  calculate();const key=mainProfile();
  state.lead={...state.lead,profile:PROFILES[key].name,profileKey:key,scores:{...state.scores},answers:[...state.answers],status:"Concluído",completedAt:new Date().toISOString()};
- await saveLead(state.lead);renderResult(key);track("quiz_completed",{profile:key});show("result");
+ const saved=await saveLead(state.lead);renderResult(key);track("quiz_completed",{profile:key});show("result");
+ if(!saved.sentToSheets)showSaveError();
+}
+function showSaveError(){
+ const message=$("#save-error");
+ if(!message.hidden)return;
+ message.hidden=false;
+ message.textContent="Não foi possível confirmar a atualização do resultado. ";
+ const retry=document.createElement("button");
+ retry.type="button";retry.textContent="Tentar novamente";
+ retry.onclick=async()=>{retry.disabled=true;const saved=await saveLead(state.lead);if(saved.sentToSheets){message.hidden=true}else{retry.disabled=false}};
+ message.appendChild(retry);
 }
 async function saveLead(lead){
  // O backup é opcional: falhas locais não podem impedir o envio à planilha.
@@ -112,11 +127,6 @@ async function saveLead(lead){
   savedLocally=true;
  }catch(error){console.warn("Backup local indisponível:",error)}
 
- if(!SHEETS_WEB_APP_URL||SHEETS_WEB_APP_URL.includes("SUA_URL")){
-   console.warn("Google Sheets ainda não configurado: informe SHEETS_WEB_APP_URL.");
-   return {savedLocally,sentToSheets:false};
- }
-
  const payload=JSON.stringify(lead);
  console.info("[Sheets] Enviando lead",{
    id:lead.id,
@@ -127,26 +137,20 @@ async function saveLead(lead){
  });
 
   try{
-    // text/plain evita a requisição OPTIONS que costuma ser bloqueada pelo Apps Script.
-    // no-cors gera uma resposta opaca: o recebimento é confirmado diretamente na planilha.
-    await fetch(SHEETS_WEB_APP_URL,{
+    const response=await fetch(VERIFIED_LEAD_ENDPOINT,{
      method:"POST",
-     mode:"no-cors",
-     headers:{"Content-Type":"text/plain;charset=utf-8"},
+     mode:VERIFIED_LEAD_ENDPOINT.startsWith("https://")?"cors":"same-origin",
+     headers:{"Content-Type":"application/json"},
      body:payload,
      cache:"no-store",
      redirect:"follow",
      keepalive:true
     });
+    const result=await response.json();
+    if(!response.ok||!result.ok||result.id!==lead.id)throw new Error(result.error||"Cadastro não confirmado.");
     return {savedLocally,sentToSheets:true};
   }catch(error){
     console.error("Não foi possível enviar o lead ao Google Sheets:",error);
-    // Em celulares, tenta enfileirar o envio caso a requisição principal seja interrompida.
-    try{if(navigator.sendBeacon){
-      const queued=navigator.sendBeacon(SHEETS_WEB_APP_URL,new Blob([payload],{type:"text/plain;charset=utf-8"}));
-      console.info("[Sheets] Beacon de contingência enviado/na fila:",queued);
-      return {savedLocally,sentToSheets:queued,error:error.message};
-    }}catch(beaconError){console.warn("Falha no envio de contingência:",beaconError)}
     return {savedLocally,sentToSheets:false,error:error.message};
   }
 }
@@ -217,7 +221,7 @@ function startOfferCountdown(p,student){
   };
   // Atualiza a mesma linha do lead antes de abrir o WhatsApp.
   // Como o link abre em outra aba e saveLead usa keepalive, o clique não é interrompido.
-  saveLead(state.lead);
+  saveLead(state.lead).then(saved=>{if(!saved.sentToSheets)showSaveError()});
   trackMetaStandard("Contact");
   track("offer_whatsapp_clicked",{profile:state.lead?.profileKey,recommended_course:p.courses[0],expired});
  };

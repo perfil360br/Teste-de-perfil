@@ -145,6 +145,16 @@ function saveToSheet(lead, brevoResult) {
 
   // Primeiro envio cria a linha; a conclusão atualiza exatamente a mesma linha.
   if (existingRow) {
+    const previous = sheet.getRange(existingRow, 1, 1, HEADERS.length).getValues()[0];
+    if (previous[9] === "Concluído" && row[9] !== "Concluído") {
+      console.log("Atualização antiga ignorada: " + lead.id);
+      return "ignored_stale";
+    }
+    if (previous[12] === "Sim" && row[12] !== "Sim") {
+      row[12] = previous[12];
+      row[13] = previous[13];
+      row[14] = previous[14];
+    }
     sheet.getRange(existingRow, 1, 1, HEADERS.length).setValues([row]);
     console.log("Lead atualizado: " + lead.id);
     return "updated";
@@ -333,7 +343,7 @@ function setupMetaAdsDataSheet(sheet) {
     "Cliques no link",
     "Visualizações da página",
     "Leads no Meta",
-    "Leads na planilha",
+    "Leads únicos no dia",
     "CPL no Meta",
     "CPL real",
     "CTR do link",
@@ -360,16 +370,7 @@ function setupMetaAdsDataSheet(sheet) {
 
   const formulas = [];
   for (let row = 2; row <= 1000; row++) {
-    formulas.push([
-      dailyLeadCountFormula(row),
-      '=IF(A' + row + '="";"";IFERROR(D' + row + '/J' + row + ';0))',
-      '=IF(A' + row + '="";"";IFERROR(D' + row + '/K' + row + ';0))',
-      '=IF(A' + row + '="";"";IFERROR(H' + row + '/E' + row + ';0))',
-      '=IF(A' + row + '="";"";IFERROR(D' + row + '/H' + row + ';0))',
-      '=IF(A' + row + '="";"";IFERROR(K' + row + '/I' + row + ';0))',
-      '=IF(A' + row + '="";"";K' + row + '-J' + row + ')',
-      '=IF(A' + row + '="";"";IF(ABS(Q' + row + ')>1;"Conferir";IF(P' + row + '<5%;"Atenção";"OK")))'
-    ]);
+    formulas.push(metaAdsRowFormulas(row));
   }
 
   // K:R são calculadas automaticamente; A:J e S receberão os dados da API.
@@ -812,23 +813,42 @@ function parseMetaDate(value, timezone) {
 }
 
 function dailyLeadCountFormula(row) {
-  // INT remove o horário das datas históricas: conta o dia civil completo.
-  return '=IF(A' + row + '="";"";COUNTIFS(Leads!$B:$B;">="&INT(A' + row + ');Leads!$B:$B;"<"&(INT(A' + row + ')+1)))';
+  // Um dia com várias campanhas contribui apenas uma vez para o total.
+  return '=IF(A' + row + '="";"";IF(COUNTIFS($A$2:A' + row + ';">="&INT(A' + row + ');$A$2:A' + row + ';"<"&(INT(A' + row + ')+1))>1;"";COUNTIFS(Leads!$B:$B;">="&INT(A' + row + ');Leads!$B:$B;"<"&(INT(A' + row + ')+1))))';
+}
+
+function metaAdsRowFormulas(row) {
+  const date = 'INT(A' + row + ')';
+  const multiple = 'COUNTIFS($A:$A;">="&' + date + ';$A:$A;"<"&(' + date + '+1))>1';
+  const blankForMultiple = function (formula) {
+    return '=IF(A' + row + '="";"";IF(' + multiple + ';"";' + formula + '))';
+  };
+  return [
+    dailyLeadCountFormula(row),
+    '=IF(A' + row + '="";"";IFERROR(D' + row + '/J' + row + ';0))',
+    blankForMultiple('IFERROR(D' + row + '/K' + row + ';0)'),
+    '=IF(A' + row + '="";"";IFERROR(H' + row + '/E' + row + ';0))',
+    '=IF(A' + row + '="";"";IFERROR(D' + row + '/H' + row + ';0))',
+    blankForMultiple('IFERROR(K' + row + '/I' + row + ';0)'),
+    blankForMultiple('K' + row + '-J' + row),
+    blankForMultiple('IF(ABS(Q' + row + ')>1;"Conferir";IF(P' + row + '<5%;"Atenção";"OK"))')
+  ];
 }
 
 // Permite corrigir o histórico mesmo quando a API da Meta está indisponível.
 function repairMetaAdsDailyCounts() {
   const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName("Meta Ads");
   if (!sheet) throw new Error('A aba "Meta Ads" não existe.');
+  sheet.getRange(1, 11).setValue("Leads únicos no dia");
   const dailyCounts = [];
   for (let row = 2; row <= sheet.getMaxRows(); row++) {
-    dailyCounts.push([dailyLeadCountFormula(row)]);
+    dailyCounts.push(metaAdsRowFormulas(row));
   }
-  const range = sheet.getRange(2, 11, dailyCounts.length, 1);
+  const range = sheet.getRange(2, 11, dailyCounts.length, 8);
   range.setFormulas(dailyCounts);
   SpreadsheetApp.flush();
   const errors = range.getDisplayValues().filter(function (row) {
-    return String(row[0]).charAt(0) === "#";
+    return row.some(function (cell) { return String(cell).charAt(0) === "#"; });
   });
   if (errors.length) throw new Error("Há erros nas fórmulas de contagem diária: " + errors.length);
   console.log("Contagem diária corrigida e verificada em " + dailyCounts.length + " linhas.");
@@ -843,16 +863,7 @@ function copyMetaAdsFormulas(sheet, startRow, endRow) {
   const formulas = [];
 
   for (let row = startRow; row <= endRow; row++) {
-    formulas.push([
-      dailyLeadCountFormula(row),
-      '=IF(A' + row + '="","",IFERROR(D' + row + '/J' + row + ',0))',
-      '=IF(A' + row + '="","",IFERROR(D' + row + '/K' + row + ',0))',
-      '=IF(A' + row + '="","",IFERROR(H' + row + '/E' + row + ',0))',
-      '=IF(A' + row + '="","",IFERROR(D' + row + '/H' + row + ',0))',
-      '=IF(A' + row + '="","",IFERROR(K' + row + '/I' + row + ',0))',
-      '=IF(A' + row + '="","",K' + row + '-J' + row + ')',
-      '=IF(A' + row + '="","",IF(ABS(Q' + row + ')>1,"Conferir",IF(P' + row + '<0.05,"Atenção","OK")))'
-    ]);
+    formulas.push(metaAdsRowFormulas(row));
   }
 
   sheet

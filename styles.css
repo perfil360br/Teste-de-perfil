@@ -17,3 +17,5 @@ dialog{width:min(510px,calc(100% - 28px));padding:31px;border:0;border-radius:20
 @media(max-width:520px){.site-footer{flex-direction:column;text-align:center}.site-footer nav{justify-content:center}}
 @media(max-width:640px){.topbar .brand{gap:7px}.brand img{height:31px}.brand-unit{padding-left:7px;font-size:8px}.topbar .badge{max-width:135px;padding:6px 8px;font-size:7px;text-align:center}.offer-ribbon{padding:9px 13px;font-size:8px}.offer-layout{padding:24px 19px 18px;grid-template-columns:1fr;text-align:center}.offer-copy h3{font-size:23px}.offer-price{width:100%;min-width:0}.offer-action{margin:0 19px;padding:18px 0 20px;flex-direction:column;text-align:center}.offer-card .whatsapp{width:100%;min-width:0}.offer-terms{padding:0 19px 22px;text-align:center}}
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+[hidden]{display:none!important}
+#save-error button{margin-left:6px;padding:0;border:0;background:none;color:var(--blue);font:inherit;text-decoration:underline;cursor:pointer}

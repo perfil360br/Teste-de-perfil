@@ -4,9 +4,10 @@ Projeto estático e mobile-first para captação de leads interessados em cursos
 
 ## Publicação
 
-Publique `index.html`, `styles.css`, `script.js`, `microlins-logo.png`,
-`privacy.html` e `exclusao-de-dados.html` juntos no GitHub Pages, Cloudflare
-Pages, Netlify, Vercel ou hospedagem da instituição.
+O projeto é publicado pelo GitHub no Cloudflare Pages. A pasta `functions/api`
+cria a rota `/api/lead`, que envia os dados ao Apps Script e confirma a gravação
+antes de iniciar o teste. A cópia no GitHub Pages usa essa mesma rota no domínio
+`teste-de-perfil.pages.dev`.
 
 Depois da publicação, use estes endereços nas configurações do aplicativo da Meta:
 
@@ -16,7 +17,7 @@ Depois da publicação, use estes endereços nas configurações do aplicativo d
 ## Antes de publicar
 
 1. Confirme se `teamWhatsapp` é o número oficial da unidade.
-2. Confirme a URL do Apps Script em `SHEETS_WEB_APP_URL`.
+2. Confirme a URL do Apps Script em `functions/api/lead.js`.
 3. Configure a chave e a lista do Brevo nas propriedades do Apps Script.
 4. Confira o Pixel da Meta e adicione Google Analytics, se desejar.
 5. Confirme por escrito as regras comerciais da oferta antes de anunciá-la.
@@ -44,9 +45,11 @@ informações **Clicou no WhatsApp**, **Data do clique no WhatsApp** e
 que a mensagem foi enviada no WhatsApp.
 
 O cadastro é enviado na tela inicial, antes da primeira pergunta, com status
-**Em andamento**. Ao terminar o teste, a mesma linha é atualizada para
-**Concluído**, sem criar outro lead. Como segurança adicional, os dados também
-ficam no `localStorage` do navegador, na chave `careerQuizLeads`, quando disponível.
+**Em andamento**. O teste só começa após a confirmação do servidor. Se a
+confirmação falhar, o botão permite tentar de novo com o mesmo ID. Ao terminar,
+a mesma linha é atualizada para **Concluído**, sem criar outro lead. Como
+segurança adicional, os dados também ficam no `localStorage` do navegador, na
+chave `careerQuizLeads`, quando disponível.
 Falhas nesse backup não impedem a tentativa de envio à planilha.
 
 
@@ -59,20 +62,19 @@ Falhas nesse backup não impedem a tentativa de envio à planilha.
 5. Em **Selecionar tipo**, escolha **Aplicativo da Web**.
 6. Configure **Executar como: Eu** e **Quem pode acessar: Qualquer pessoa**.
 7. Clique em **Implantar**, autorize o acesso e copie a URL terminada em `/exec`.
-8. Em `script.js`, coloque essa URL em `SHEETS_WEB_APP_URL`.
+8. Em `functions/api/lead.js`, coloque essa URL em `UPSTREAM`.
 9. Envie um cadastro de teste. A aba **Leads** será criada automaticamente.
 
 Ao alterar o Apps Script no futuro, use **Implantar > Gerenciar implantações > Editar > Nova versão**. Salvar o código sem criar uma nova versão não atualiza a integração publicada.
 
-### Aplicar as correções da revisão
+### Contagem diária da campanha
 
-Republique o `script.js` na hospedagem e atualize o código do Apps Script,
-publicando uma nova versão da implantação. Execute `repairMetaAdsDailyCounts`
-para atualizar e verificar as fórmulas existentes de contagem diária na aba **Meta Ads**,
-mesmo que a API da Meta esteja indisponível.
-Essa atualização também ocorrerá na próxima sincronização agendada.
-Os limites da contagem usam o dia civil no fuso da planilha, incluindo registros
-antigos cuja data do relatório continha horário.
+Execute `repairMetaAdsDailyCounts` para atualizar e verificar as fórmulas
+existentes na aba **Meta Ads**, mesmo que a API da Meta esteja indisponível.
+Quando houver várias campanhas no mesmo dia, os leads da planilha entram uma
+única vez no total. As métricas que exigiriam atribuir esses leads a uma
+campanha individual ficam vazias. Os limites da contagem usam o dia civil no
+fuso da planilha, incluindo registros antigos cuja data continha horário.
 
 ## Integração com o Brevo
 
