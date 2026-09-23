@@ -18,18 +18,11 @@ export async function onRequestPost({ request }) {
     });
     if (!upstream.ok) {
       console.error("Apps Script respondeu com HTTP", upstream.status);
-      return json({ ok: false, error: "Falha ao salvar o cadastro.", upstreamStatus: upstream.status }, 502, request);
+      return json({ ok: false, error: "Falha ao salvar o cadastro." }, 502, request);
     }
     const result = await upstream.json();
     if (!result.ok || result.id !== lead.id) {
-      return json({
-        ok: false,
-        error: result.error || "Cadastro não confirmado.",
-        upstreamStatus: upstream.status,
-        responseKeys: Object.keys(result),
-        responseOk: result.ok,
-        idMatches: result.id === lead.id,
-      }, 502, request);
+      return json({ ok: false, error: result.error || "Cadastro não confirmado." }, 502, request);
     }
     return json({ ok: true, id: result.id, sheetAction: result.sheetAction }, 200, request);
   } catch (error) {
